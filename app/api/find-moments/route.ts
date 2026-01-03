@@ -2,10 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import OpenAI from 'openai'
 import type { TranscriptionSegment, ViralMoment } from '@/types'
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-})
-
 export async function POST(request: NextRequest) {
   try {
     const { transcription, segments } = await request.json()
@@ -17,12 +13,29 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (!process.env.OPENAI_API_KEY) {
+    // Check if API key exists
+    const apiKey = process.env.OPENAI_API_KEY
+    if (!apiKey) {
+      console.error('OPENAI_API_KEY is not set in environment variables')
       return NextResponse.json(
-        { error: 'OPENAI_API_KEY is not configured' },
+        { error: 'OPENAI_API_KEY is not configured. Please check your .env.local file.' },
         { status: 500 }
       )
     }
+    
+    // Verify API key format
+    if (!apiKey.startsWith('sk-')) {
+      console.error('Invalid API key format')
+      return NextResponse.json(
+        { error: 'Invalid OpenAI API key format. API keys should start with "sk-"' },
+        { status: 500 }
+      )
+    }
+    
+    // Initialize OpenAI client with the API key
+    const openai = new OpenAI({
+      apiKey: apiKey,
+    })
 
     // Create a prompt for GPT to find viral moments
     const prompt = `Analyze this podcast/video transcription and identify viral-worthy moments. Look for:
